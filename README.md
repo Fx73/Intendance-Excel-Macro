@@ -7,7 +7,7 @@
 
 ## 🍔 Obtenir la macro
 
-Vous pouvez simplement récuperer le fichier <i>MacroIntendance.xlsm</i> et autoriser les macros. <br>
+Vous pouvez simplement récuperer le fichier [MacroIntendance.xlsm](https://github.com/Fx73/Intendance-Excel-Macro/raw/master/MacroIntendance.xlsm) et autoriser les macros. <br>
 Si vous êtes plus méfiant, les sources sont disponibles, à télécharger et à placer dans un workbook excel.
 
 
