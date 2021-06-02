@@ -1,4 +1,4 @@
-# Intendance-Excel-Macro
+# Assistant-Intendance-Excel
 
 <b>Macro Excel d'assistance à gestion des stocks de nourriture</b> <br>
 
