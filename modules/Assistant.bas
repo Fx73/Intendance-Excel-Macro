@@ -1,4 +1,6 @@
 Attribute VB_Name = "Assistant"
+Const VERSION As Double = 1.2
+
 Function SetMycell(ByVal s As String)
     Worksheets("Accueil").Cells(2, 9).Value = s
 End Function
@@ -23,7 +25,7 @@ Sub ProjetIntendance()
         If CreateSheet("Recettes", 5) Then SetRecettes
 
     End If
-    If MsgBox("Voulez-vous mettre à jour la feuille de BaseAliments sur Internet ?", vbYesNo, Title:="Mise a jour ?") = vbYes Then
+    If MsgBox("Voulez-vous mettre à jour la feuille de BaseAliments sur Internet ?" & vbCrLf & vbCrLf & "(Attention cela prend un peu de temps durant lequel il ne faut pas toucher aux feuilles en question !)", vbYesNo, Title:="Mise a jour ?") = vbYes Then
         Dim c: c = GetPingResult("google.fr")
         If (c = "Connected") Then
             If sheetExists("BaseAliments") Then Worksheets("BaseAliments").Delete
@@ -106,12 +108,7 @@ Private Sub SetAccueil()
         hlink.TextFrame.Characters.Font.Color = RGB(6, 69, 173)
         .Hyperlinks.Add hlink, "mailto:fx73000@yahoo.fr?subject=(AssistantIntendance) - Help"
         
-        .Range("J1").Value = "1.1"
-        .Shapes.AddTextbox(msoTextOrientationHorizontal, 1040, 82, 80, 400).TextFrame.Characters.Text = _
-"Version Log :" & vbCrLf & _
-"Menu et Listes Fonctionnels, à tester" & vbCrLf & _
-"Recettes not ok"
-
+        .Range("J1").Value = VERSION
 
         
          Set btn = .Buttons.Add(870, 83, 110, 30)
@@ -284,24 +281,33 @@ Private Function Addtolist(item As String, Optional dat As Date = "00:00:00")
     Dim ba As Range: Set ba = Worksheets("BaseAliments").Columns(1).Cells.Find(what:=item)
     Dim br As Range: Set br = Worksheets("BaseRecettes").Columns(1).Cells.Find(what:=item)
     
-    'Calcul de la zone de course pour le frais
+    'Calcul de la zone de course pour le frais et du nombre d'occurence de l'aliment
     Dim daterange As Range: Set daterange = GetDateRange(dat)
-    Dim c: c = CountInMenu(item, daterange)
-        
+    Dim c As Integer
+    If Not ba Is Nothing Then
+        If (Worksheets("BaseAliments").Cells(ba.Row, 4).Value = "Frais") Then
+            c = CountInMenu(item, daterange)
+        Else
+            c = CountInMenu(item)
+        End If
+    Else
+        c = CountInMenu(item)
+    End If
+    
     'Classement
     If Not ba Is Nothing Then 'Est dans la base Aliments
         If (Worksheets("BaseAliments").Cells(ba.Row, 4).Value = "Sec") Then
-            Set b = Sheets("Liste Sec").Columns(2).Cells.Find(what:=item)
+            Set b = Sheets("Liste Sec").Columns(2).Cells.Find(what:=item, lookat:=xlWhole)
             If Not b Is Nothing Then Worksheets("Liste Sec").Cells(b.Row, 3).Value = c Else Call ListSetAlimentSec(ba)
         Else
-            Set b = daterange.Find(what:=item)
+            Set b = daterange.Find(what:=item, lookat:=xlWhole)
             If Not b Is Nothing Then Worksheets("Liste Frais").Cells(b.Row, 3).Value = c Else Call ListSetAlimentFrais(ba, dat)
         End If
        
     ElseIf Not br Is Nothing Then 'Est dans la base Recettes
         Dim r As Range: Set r = Sheets("BaseRecettes").Range("B" & br.Row & ":" & "B" & NextRow(Range(br.address), "BaseRecettes"))
-        For i = br.Row To NextRow(Range(br.address), "BaseRecettes") 'Pour chacun des ingédients
-            If (Worksheets("BaseRecettes").Cells(i, 5).Value = "Sec") Then
+        For i = 1 To NextRow(Range(br.address), "BaseRecettes") - br.Row + 1 'Pour chacun des ingédients
+            If (Worksheets("BaseRecettes").Cells(br.Row + i - 1, 5).Value = "Sec") Then
                 Set b = Sheets("Liste Sec").Columns(2).Cells.Find(what:=r(i) & " - " & item)
                 If Not b Is Nothing Then Worksheets("Liste Sec").Cells(b.Row, 3).Value = c Else Call ListSetAlimentSec(r(i), " - " & item)
             Else
@@ -311,7 +317,7 @@ Private Function Addtolist(item As String, Optional dat As Date = "00:00:00")
         Next
         
     Else 'N'est pas dans une base
-        NewAliment
+        NewAliment item
     End If
     
     Exit Function
@@ -342,7 +348,7 @@ Private Sub RemoveFromList(Optional dat As Date = "00:00:00")
             Call DelRowsContaining("- " & Mycell, "Liste Sec")
             Call DelRowsContaining("- " & Mycell, "Liste Frais")
         Else
-            Set t = Worksheets("Liste Sec").Columns(2).Cells.Find(what:="- " & Mycell, LookAt:=xlPart)
+            Set t = Worksheets("Liste Sec").Columns(2).Cells.Find(what:="- " & Mycell, lookat:=xlPart)
             If Not t Is Nothing Then
                 t.Next.Value = c
                 Set tt = Worksheets("Liste Sec").Columns(2).Cells.FindNext(t)
@@ -351,7 +357,7 @@ Private Sub RemoveFromList(Optional dat As Date = "00:00:00")
                     Set tt = Worksheets("Liste Sec").Columns(2).Cells.FindNext(tt)
                 Wend
             End If
-            Set t = daterange.Find(what:="- " & Mycell, LookAt:=xlPart)
+            Set t = daterange.Find(what:="- " & Mycell, lookat:=xlPart)
             If Not t Is Nothing Then
                 t.Next.Value = c
                 Set tt = daterange.FindNext(t)
@@ -366,7 +372,9 @@ End Sub
 
 Private Function GetDateRange(dat As Date) As Range
     If dat = "00:00:00" Or dat >= Worksheets("Liste Frais").Cells(Rows.Count, "A").End(xlUp).Value Then
-        Set GetDateRange = Worksheets("Liste Frais").Range("B" + CStr(Worksheets("Liste Frais").Cells(Rows.Count, "A").End(xlUp).Row) + ":B" + CStr(Worksheets("Liste Frais").Cells(Rows.Count, "B").End(xlUp).Row))
+        Dim drow As Integer: drow = Worksheets("Liste Frais").Cells(Rows.Count, "A").End(xlUp).Row
+        Dim dlastitem As Integer: dlastitem = Worksheets("Liste Frais").Cells(Rows.Count, "B").End(xlUp).Row
+        Set GetDateRange = Worksheets("Liste Frais").Range("B" + CStr(drow) + ":B" + CStr(WorksheetFunction.max(drow, dlastitem)))
     Else
         Dim dcourse As Range: Set dcourse = Worksheets("Liste Frais").Range("A2")
         If dcourse.Value > dat Then Exit Function
@@ -375,7 +383,7 @@ Private Function GetDateRange(dat As Date) As Range
                 Set GetDateRange = Worksheets("Liste Frais").Range("B" + CStr(dcourse.Row) + ":B" + CStr(Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=dcourse).Row - 1))
                 Exit Do
             Else
-                dcourse = Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=dcourse)
+                Set dcourse = Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=dcourse)
             End If
         Loop
     End If
@@ -412,8 +420,9 @@ Private Sub Actualiser()
             
             Dim previous As Long: previous = 2
             While Worksheets("Liste Frais").Range("A2").Value > Worksheets("Menu").Range(Col_Letter(previous) + "3").Value
-            previous = previous + 1
+                previous = previous + 1
             Wend
+            
             Dim dat As Date: dat = Worksheets("Liste Frais").Range("A2")
             Do While dat <> "00:00:00"
                 While dat > Worksheets("Menu").Range(Col_Letter(previous) + "3").Value
@@ -425,12 +434,18 @@ Private Sub Actualiser()
                 If Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=Worksheets("Liste Frais").Columns(1).Find(what:=dat)).Row < Worksheets("Liste Frais").Columns(1).Find(what:=dat).Row Then Exit Do
                 dat = Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=Worksheets("Liste Frais").Columns(1).Find(what:=dat)).Value
             Loop
+            
             While Worksheets("Accueil").Range("C3").Value + Worksheets("Accueil").Range("A3").Value > Worksheets("Menu").Range(Col_Letter(previous) + "3").Value
                 For Each cel In Worksheets("Menu").Range(Col_Letter(previous) + "4:" + Col_Letter(previous) + CStr(n))
                     If Not cel Is Nothing And Not cel.Value = "" Then Addtolist cel.Value, Worksheets("Menu").Columns(cel.Column).Cells(1).Value
                 Next
             previous = previous + 1
             Wend
+            
+            For Each cel In Worksheets("Menu").Range(Col_Letter(previous) + "4:" + Col_Letter(previous) + CStr(n))
+                If Not cel Is Nothing And Not cel.Value = "" Then Addtolist cel.Value, Worksheets("Menu").Columns(cel.Column).Cells(1).Value
+            Next
+            
         End If
     End If
  End With
@@ -485,8 +500,8 @@ Private Sub ListSetAlimentSec(a As Range, Optional ing As String = "")
 End Sub
 
 
-Private Sub NewAliment()
-    Dim rep: rep = MsgBox("Aliment non répertorié" & vbCrLf & "Vous devez l'ajouter si vous voulez qu'il apparaisse dans la liste", vbYesNo, "Ajout")
+Private Sub NewAliment(item As String)
+    Dim rep: rep = MsgBox("Aliment non répertorié : " & item & vbCrLf & "Vous devez l'ajouter si vous voulez qu'il apparaisse dans la liste", vbYesNo, "Ajout")
     If (rep = vbYes) Then
         With Worksheets("BaseAliments").Columns(1).Cells.Find(what:="")
                 .Value = InputBox("Nom de l'aliment ?", "Nom", item)
@@ -495,15 +510,17 @@ Private Sub NewAliment()
                 .Next.Next.Next.Value = InputBox("Sec ou Frais", "Conservation", "Sec/Frais")
         End With
     Else
-    Worksheets("Menu").CB.Value = ""
+        On Error GoTo pass
+            Worksheets("Menu").CB.Value = ""
+pass:
     End If
 End Sub
 
 Private Sub DelRowsContaining(s As String, ws As String)
-    Set t = Sheets(ws).Columns(2).Cells.Find(what:=s, LookAt:=xlPart)
+    Set t = Sheets(ws).Columns(2).Cells.Find(what:=s, lookat:=xlPart)
     While Not t Is Nothing
         t.EntireRow.Delete
-        Set t = Sheets(ws).Columns(2).Cells.Find(what:=s, LookAt:=xlPart)
+        Set t = Sheets(ws).Columns(2).Cells.Find(what:=s, lookat:=xlPart)
     Wend
 End Sub
 

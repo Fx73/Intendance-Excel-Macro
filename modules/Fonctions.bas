@@ -61,7 +61,6 @@ Sub GetDataFromGoogle(wsn As String, address As String)
 Dim i As Integer
   With Worksheets(wsn)
     With .QueryTables.Add(Connection:="URL;" & address, Destination:=.Range("$A$1"))
-        .Name = "List"
         .PreserveFormatting = False
         .BackgroundQuery = True
         .WebFormatting = xlWebFormattingNone
