@@ -227,30 +227,32 @@ ErrorHandler:
 MsgBox ("Pour pouvoir remettre l'assistant à zero, il faut : " + vbCrLf + "Dans les Options" + vbCrLf + " - Centre de Gestion de la Confidentialité" + vbCrLf + " - Paramètre du Centre de Gestion de la Confidentialité" + vbCrLf + " - Paramètres des macros" + vbCrLf + "il faut cocher Acces approuvé au modèle d'objet du projet VBA" + vbCrLf + "(ou alors rerécuperer l'assistant sur internet)")
 End Sub
 
-'Appelé à la validation de la combobox
+'Appelé à la validation de la combobox, ajoute ou supprime des ligne
 Public Function AddLineOnObject()
     ListRepartition
     Dim a: a = Worksheets("Menu").OLEObjects("CB").LinkedCell
     If (Range(a) <> "") Then
-        a = Cells(Range(a).Row + 1, 1).address(RowAbsolute:=False, ColumnAbsolute:=False)
+        a = Cells(Range(a).row + 1, 1).address(RowAbsolute:=False, ColumnAbsolute:=False)
         If (Range(a).Value <> "" Or Range(a).Interior.Color = RGB(255, 255, 255)) Then
             Range(a).EntireRow.Insert
         End If
         
     Else
          For i = 1 To WorksheetFunction.max(Worksheets("Accueil").Range("A3").Value, 1)
-            If Range(Cells(Range(a).Row, i).address(RowAbsolute:=False, ColumnAbsolute:=False)) <> "" Then
+            If Range(Cells(Range(a).row, i).address(RowAbsolute:=False, ColumnAbsolute:=False)) <> "" Then
                 Worksheets("Menu").OLEObjects.Delete
                 Exit Function
             End If
          Next
          For i = 2 To WorksheetFunction.max(Worksheets("Accueil").Range("A3").Value, 1)
-            If Range(Cells(Range(a).Row - 1, i).address(RowAbsolute:=False, ColumnAbsolute:=False)) <> "" Then
+            If Range(Cells(Range(a).row - 1, i).address(RowAbsolute:=False, ColumnAbsolute:=False)) <> "" Then
                 Worksheets("Menu").OLEObjects.Delete
                 Exit Function
             End If
          Next
-         Range(Cells(Range(a).Row, 1).address(RowAbsolute:=False, ColumnAbsolute:=False)).EntireRow.Delete
+         If Application.CountA(Range(Cells(Range(a).Column, Range(a).row).address(RowAbsolute:=False, ColumnAbsolute:=False)).EntireRow) = 0 Then
+            Range(Cells(Range(a).row, 1).address(RowAbsolute:=False, ColumnAbsolute:=False)).EntireRow.Delete
+         End If
     End If
     Worksheets("Menu").OLEObjects.Delete
 End Function
@@ -285,7 +287,7 @@ Private Function Addtolist(item As String, Optional dat As Date = "00:00:00")
     Dim daterange As Range: Set daterange = GetDateRange(dat)
     Dim c As Integer
     If Not ba Is Nothing Then
-        If (Worksheets("BaseAliments").Cells(ba.Row, 4).Value = "Frais") Then
+        If (Worksheets("BaseAliments").Cells(ba.row, 4).Value = "Frais") Then
             c = CountInMenu(item, daterange)
         Else
             c = CountInMenu(item)
@@ -296,23 +298,23 @@ Private Function Addtolist(item As String, Optional dat As Date = "00:00:00")
     
     'Classement
     If Not ba Is Nothing Then 'Est dans la base Aliments
-        If (Worksheets("BaseAliments").Cells(ba.Row, 4).Value = "Sec") Then
+        If (Worksheets("BaseAliments").Cells(ba.row, 4).Value = "Sec") Then
             Set b = Sheets("Liste Sec").Columns(2).Cells.Find(what:=item, lookat:=xlWhole)
-            If Not b Is Nothing Then Worksheets("Liste Sec").Cells(b.Row, 3).Value = c Else Call ListSetAlimentSec(ba)
+            If Not b Is Nothing Then Worksheets("Liste Sec").Cells(b.row, 3).Value = c Else Call ListSetAlimentSec(ba)
         Else
             Set b = daterange.Find(what:=item, lookat:=xlWhole)
-            If Not b Is Nothing Then Worksheets("Liste Frais").Cells(b.Row, 3).Value = c Else Call ListSetAlimentFrais(ba, dat)
+            If Not b Is Nothing Then Worksheets("Liste Frais").Cells(b.row, 3).Value = c Else Call ListSetAlimentFrais(ba, dat)
         End If
        
     ElseIf Not br Is Nothing Then 'Est dans la base Recettes
-        Dim r As Range: Set r = Sheets("BaseRecettes").Range("B" & br.Row & ":" & "B" & NextRow(Range(br.address), "BaseRecettes"))
-        For i = 1 To NextRow(Range(br.address), "BaseRecettes") - br.Row + 1 'Pour chacun des ingédients
-            If (Worksheets("BaseRecettes").Cells(br.Row + i - 1, 5).Value = "Sec") Then
+        Dim r As Range: Set r = Sheets("BaseRecettes").Range("B" & br.row & ":" & "B" & NextRow(Range(br.address), "BaseRecettes"))
+        For i = 1 To NextRow(Range(br.address), "BaseRecettes") - br.row + 1 'Pour chacun des ingédients
+            If (Worksheets("BaseRecettes").Cells(br.row + i - 1, 5).Value = "Sec") Then
                 Set b = Sheets("Liste Sec").Columns(2).Cells.Find(what:=r(i) & " - " & item)
-                If Not b Is Nothing Then Worksheets("Liste Sec").Cells(b.Row, 3).Value = c Else Call ListSetAlimentSec(r(i), " - " & item)
+                If Not b Is Nothing Then Worksheets("Liste Sec").Cells(b.row, 3).Value = c Else Call ListSetAlimentSec(r(i), " - " & item)
             Else
                 Set b = daterange.Find(what:=r(i) & " - " & item)
-                If Not b Is Nothing Then Worksheets("Liste Frais").Cells(b.Row, 3).Value = c Else Call ListSetAlimentFrais(r(i), dat, " - " & item)
+                If Not b Is Nothing Then Worksheets("Liste Frais").Cells(b.row, 3).Value = c Else Call ListSetAlimentFrais(r(i), dat, " - " & item)
             End If
         Next
         
@@ -372,15 +374,15 @@ End Sub
 
 Private Function GetDateRange(dat As Date) As Range
     If dat = "00:00:00" Or dat >= Worksheets("Liste Frais").Cells(Rows.Count, "A").End(xlUp).Value Then
-        Dim drow As Integer: drow = Worksheets("Liste Frais").Cells(Rows.Count, "A").End(xlUp).Row
-        Dim dlastitem As Integer: dlastitem = Worksheets("Liste Frais").Cells(Rows.Count, "B").End(xlUp).Row
+        Dim drow As Integer: drow = Worksheets("Liste Frais").Cells(Rows.Count, "A").End(xlUp).row
+        Dim dlastitem As Integer: dlastitem = Worksheets("Liste Frais").Cells(Rows.Count, "B").End(xlUp).row
         Set GetDateRange = Worksheets("Liste Frais").Range("B" + CStr(drow) + ":B" + CStr(WorksheetFunction.max(drow, dlastitem)))
     Else
         Dim dcourse As Range: Set dcourse = Worksheets("Liste Frais").Range("A2")
         If dcourse.Value > dat Then Exit Function
         Do While True
             If Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=dcourse).Value > dat Then
-                Set GetDateRange = Worksheets("Liste Frais").Range("B" + CStr(dcourse.Row) + ":B" + CStr(Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=dcourse).Row - 1))
+                Set GetDateRange = Worksheets("Liste Frais").Range("B" + CStr(dcourse.row) + ":B" + CStr(Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=dcourse).row - 1))
                 Exit Do
             Else
                 Set dcourse = Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=dcourse)
@@ -396,7 +398,7 @@ If dr Is Nothing Then
 Else
     Dim colA As String, colB As String
      colA = Col_Letter(Worksheets("Menu").Rows(3).Find(what:=dr.End(xlToLeft)).Column)
-     colB = Col_Letter(Worksheets("Menu").Rows(3).Find(Worksheets("Liste Frais").Range("A" + CStr(dr.Row + dr.Rows.Count)).Value).Column - 1)
+     colB = Col_Letter(Worksheets("Menu").Rows(3).Find(Worksheets("Liste Frais").Range("A" + CStr(dr.row + dr.Rows.Count)).Value).Column - 1)
      CountInMenu = Application.WorksheetFunction.CountIf(Worksheets("Menu").Range(colA + "4:" + colB + CStr(LastMenuRow)), item)
     
 End If
@@ -431,7 +433,7 @@ Private Sub Actualiser()
                     Next
                 previous = previous + 1
                 Wend
-                If Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=Worksheets("Liste Frais").Columns(1).Find(what:=dat)).Row < Worksheets("Liste Frais").Columns(1).Find(what:=dat).Row Then Exit Do
+                If Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=Worksheets("Liste Frais").Columns(1).Find(what:=dat)).row < Worksheets("Liste Frais").Columns(1).Find(what:=dat).row Then Exit Do
                 dat = Worksheets("Liste Frais").Columns(1).Find(what:="*", after:=Worksheets("Liste Frais").Columns(1).Find(what:=dat)).Value
             Loop
             
@@ -473,7 +475,7 @@ Private Function ListSetAlimentFrais(a As Range, Optional dat As Date = "00:00:0
                     .Value = a.Value & ing
                     .Next.Value = 1
                     .Next.Next.Value = a.Next.Value
-                    .Next.Next.Next.Next.Formula = "= $" & Col_Letter(.Next.Column) & "$" & .Row & " * $" & Col_Letter(.Next.Next.Column) & "$" & .Row & " *Accueil!E3"
+                    .Next.Next.Next.Next.Formula = "= $" & Col_Letter(.Next.Column) & "$" & .row & " * $" & Col_Letter(.Next.Next.Column) & "$" & .row & " *Accueil!E3"
                     .Next.Next.Next.Next.Next = a.Next.Next.Value
     End With
 End Function
@@ -494,7 +496,7 @@ Private Sub ListSetAlimentSec(a As Range, Optional ing As String = "")
                     .Value = a.Value & ing
                     .Next.Value = 1
                     .Next.Next.Value = a.Next.Value
-                    .Next.Next.Next.Next.Formula = "= $" & Col_Letter(.Next.Column) & "$" & .Row & " * $" & Col_Letter(.Next.Next.Column) & "$" & .Row & " *Accueil!E3"
+                    .Next.Next.Next.Next.Formula = "= $" & Col_Letter(.Next.Column) & "$" & .row & " * $" & Col_Letter(.Next.Next.Column) & "$" & .row & " *Accueil!E3"
                     .Next.Next.Next.Next.Next = a.Next.Next.Value
     End With
 End Sub
@@ -527,7 +529,7 @@ End Sub
 Private Function LastMenuRow() As Integer
     For Each cel In Worksheets("Menu").Range("A:A")
         If cel.Interior.Color = RGB(255, 255, 255) Then
-            LastMenuRow = cel.Row - 1
+            LastMenuRow = cel.row - 1
             Exit For
         End If
     Next cel
