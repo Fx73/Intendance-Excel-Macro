@@ -160,20 +160,16 @@ End Sub
 
 
 Private Sub SetBaseAliments()
-    Call GetDataFromGoogle("BaseAliments", "https://docs.google.com/spreadsheets/d/1Rudp78FjmbWhtPMRLr6ItgIq0p_alzeSQKTVKlkOVA4/edit?usp=sharing")
+    Call GetDataFromGoogle("BaseAliments", "1Rudp78FjmbWhtPMRLr6ItgIq0p_alzeSQKTVKlkOVA4")
     With Worksheets("BaseAliments")
-        .Range("A1:A3").EntireRow.Delete
-        .Range("A1").EntireColumn.Delete
-        .Columns(2).NumberFormat = "# ?/?"
+        .Columns(2).NumberFormat = "# ?/??"
     End With
 End Sub
 
 Private Sub SetBaseRecettes()
-    Call GetDataFromGoogle("BaseRecettes", "https://docs.google.com/spreadsheets/d/1J2PQ1NK6bKJ3sykCZon31PPnAkeOO8qYifyUxvTBDJs/edit?usp=sharing")
+    Call GetDataFromGoogle("BaseRecettes", "1J2PQ1NK6bKJ3sykCZon31PPnAkeOO8qYifyUxvTBDJs")
     With Worksheets("BaseRecettes")
-        .Range("A1:A3").EntireRow.Delete
-        .Range("A1").EntireColumn.Delete
-        .Columns(3).NumberFormat = "# ?/?"
+        .Columns(3).NumberFormat = "# ?/??"
     End With
 End Sub
 

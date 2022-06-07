@@ -57,12 +57,12 @@ Function GetPingResult(Host)
    Set objPing = Nothing
 End Function
 
-Sub GetDataFromGoogle(wsn As String, address As String)
+Sub GetDataFromGoogle(wsn As String, addressKey As String)
+Dim googlePrefix As String: googlePrefix = "https://spreadsheets.google.com/tq?tqx=out:html&tq=&key="
 Dim i As Integer
   With Worksheets(wsn)
-    With .QueryTables.Add(Connection:="URL;" & address, Destination:=.Range("$A$1"))
+    With .QueryTables.Add(Connection:="URL;" & googlePrefix & addressKey, Destination:=.Range("$A$1"))
         .PreserveFormatting = False
-        .BackgroundQuery = True
         .WebFormatting = xlWebFormattingNone
         .Refresh BackgroundQuery:=False
     End With
@@ -110,7 +110,7 @@ End Function
 
 Public Function NextRow(a As Range, ws As String) As Integer
     Dim c As Integer: c = a.Column
-    Dim r As Integer: r = a.Row + 1
+    Dim r As Integer: r = a.row + 1
     While Worksheets(ws).Cells(r, c) = "" And Worksheets(ws).Cells(r, c + 1) <> ""
         r = r + 1
     Wend
